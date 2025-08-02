@@ -1,43 +1,59 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
-
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
+    <Tabs>
       <Tabs.Screen
-        name="index"
+        name="(home)"
         options={{
+          headerShown: false,
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="login"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          headerShown: false,
+          title: 'Login',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="log-in-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="create"
+        options={{
+          headerShown: false,
+          title: 'Create',
+          tabBarIcon: ({ color, size }) => (
+          <Ionicons name="document-text-outline" size={24} color="green" />
+          ),
+        }}
+      />
+            <Tabs.Screen
+        name="edit"
+        options={{
+          headerShown: false,
+          title: 'edit',
+          tabBarIcon: ({ color, size }) => (
+          <Ionicons name="pencil-outline" size={24} color="green" />
+          ),
+        }}
+      />
+         <Tabs.Screen
+        name="Preview"
+        options={{
+          headerShown: false,
+          title: 'Preview',
+          tabBarIcon: ({ color, size }) => (
+          <Ionicons name="pencil-outline" size={24} color="green" />
+          ),
         }}
       />
     </Tabs>
