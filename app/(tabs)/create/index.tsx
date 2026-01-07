@@ -1,10 +1,12 @@
 import { useState, useEffect, } from "react";
-import { View, Text, Button, TextInput } from "react-native";
+import { View, Text, TextInput, Animated, Dimensions, TouchableOpacity } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { jwtDecode } from 'jwt-decode';
 import axios from "axios";
+import { IconButton, Card, Surface } from "react-native-paper";
+
 
 type Person = {
   email?: string;
@@ -15,7 +17,7 @@ type Person = {
 
 export default function Create() {
   const [formSchema, setFormSchema] = useState<
-    { field: string; type: string }[]
+    { field: string; type: string; options?: string[] }[]
   >([]);
   const [success, setSuccess] = useState(false)
   const [title, setTitle] = useState('')
@@ -41,13 +43,41 @@ export default function Create() {
   const handleClick = () => {
     setFormSchema((prev) => [
       ...prev,
-      { field: "", type: "text" }, // Add a new blank field
+      { field: "", type: "short", options: [] }, // Add a new blank field
     ]);
   };
 
  const updateField = (index: number, key: "field" | "type", value: string) => {
   const updated = [...formSchema];
-  updated[index][key] = value;
+  updated[index] = { ...updated[index], [key]: value } as typeof updated[number];
+  // clear options if type changed to a non-option type
+  if (key === 'type' && !(value === 'multiple' || value === 'checkbox')) {
+    delete updated[index].options;
+  } else if (key === 'type' && (value === 'multiple' || value === 'checkbox')) {
+    updated[index].options = updated[index].options || [];
+  }
+  setFormSchema(updated);
+};
+
+const addOption = (fieldIndex: number) => {
+  const updated = [...formSchema];
+  const options = updated[fieldIndex].options || [];
+  options.push('');
+  updated[fieldIndex].options = options;
+  setFormSchema(updated);
+};
+
+const updateOption = (fieldIndex: number, optionIndex: number, value: string) => {
+  const updated = [...formSchema];
+  if (!updated[fieldIndex].options) return;
+  updated[fieldIndex].options![optionIndex] = value;
+  setFormSchema(updated);
+};
+
+const removeOption = (fieldIndex: number, optionIndex: number) => {
+  const updated = [...formSchema];
+  if (!updated[fieldIndex].options) return;
+  updated[fieldIndex].options = updated[fieldIndex].options!.filter((_, i) => i !== optionIndex);
   setFormSchema(updated);
 };
 
@@ -67,7 +97,7 @@ export default function Create() {
     const res = await axios.post('http://192.168.1.171:5000/process', payload)
     await AsyncStorage.setItem('userFormSchema', JSON.stringify(formSchema));
     setSuccess(true)
-    router.push('/(tabs)/edit')
+    router.push('/edit')
   } catch (error) {
     console.error('Error saving schema:', error);
   }
@@ -75,38 +105,114 @@ export default function Create() {
 
 
   return (
-    <View className="w-[80%] mx-8 mt-6">
-      <Text className="text-xl font-bold mb-4">Create Fields</Text>
-      <Button title="Add Field" onPress={handleClick} />
-      <TextInput onChangeText={setTitle} placeholder="title"/>
-
-      {formSchema.map((fieldObj, index) => (
-        <View key={index} className="flex flex-row items-center gap-2 mt-4">
-          <TextInput
-            placeholder="Field Name"
-            value={fieldObj.field}
-            onChangeText={(text) => updateField(index, "field", text)}
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              padding: 10,
-              borderRadius: 5,
-              width: 250,
-              flex: 1,
-            }}
-          />
-          <FontAwesome5
-            name="trash"
-            size={22}
-            color="red"
-            onPress={() => removeField(index)}
+    <View className="flex-1 bg-slate-50 p-6">
+      <View className="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <Text className="text-3xl font-bold mb-2 text-indigo-600">Create Fields</Text>
+        <Text className="text-gray-600 mb-4">Design your custom form layout</Text>
+        <View className="bg-gray-50 rounded-lg p-4 mb-4">
+          <TextInput 
+            onChangeText={setTitle} 
+            placeholder="Enter Form Title"
+            className="text-xl p-4 bg-white rounded-lg border-2 border-indigo-100 focus:border-indigo-500"
+            placeholderTextColor="#9ca3af"
           />
         </View>
-      ))}
-      {success && <Text>Saved the schema</Text>}
-     {formSchema.length > 0 && (
-  <Button title="Save Schema" onPress={saveSchemaToStorage} />
-)}
+        <View className="flex flex-row justify-between">
+        <IconButton 
+          icon='plus-circle' 
+          mode="contained"
+          containerColor="#4f46e5"
+          iconColor="white"
+          size={30}
+          onPress={handleClick}
+          className="self-center"
+        />
+
+           <IconButton
+            icon="send"
+            mode="contained"
+            size={30}
+            containerColor="#4f46e5"
+            iconColor="white"
+            onPress={saveSchemaToStorage}
+            className="self-center"
+          />
+          </View>
+      </View>
+
+      <View className="bg-white rounded-xl shadow-lg p-4">
+        {formSchema.map((fieldObj, index) => (
+          <View key={index} className="mb-4 bg-gray-50 p-3 rounded-lg">
+            <View className="flex-row justify-between items-starrt">
+              <TextInput
+                placeholder="Field Name"
+                value={fieldObj.field}
+                onChangeText={(text) => updateField(index, "field", text)}
+                className="flex-1 p-3 bg-white rounded-lg border-2 border-gray-100"
+                placeholderTextColor="#9ca3af"
+              />
+              <TouchableOpacity onPress={() => removeField(index)} className="ml-3">
+                <View className="bg-red-50 p-2 rounded-full">
+                  <FontAwesome5 name="trash" size={18} color="#dc2626" />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View className="flex-row gap-2 mt-3 flex-wrap">
+              {[
+                { label: 'Short', value: 'short' },
+                { label: 'Number', value: 'number' },
+                { label: 'Multiple', value: 'multiple' },
+                { label: 'Checkbox', value: 'checkbox' },
+                { label: 'Paragraph', value: 'paragraph' },
+              ].map((t) => (
+                <TouchableOpacity
+                  key={t.value}
+                  onPress={() => updateField(index, 'type', t.value)}
+                  className={`px-3 py-1 rounded-full ${fieldObj.type === t.value ? 'bg-indigo-600' : 'bg-white'} ${fieldObj.type === t.value ? 'shadow-md' : 'border'}`}
+                >
+                  <Text className={`${fieldObj.type === t.value ? 'text-white' : 'text-gray-700'}`}>{t.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {(fieldObj.type === 'multiple' || fieldObj.type === 'checkbox') && (
+              <View className="mt-3">
+                <Text className="text-sm text-gray-600 mb-2">Options</Text>
+                {fieldObj.options?.map((opt, oi) => (
+                  <View key={oi} className="flex-row items-center gap-2 mb-2">
+                    <TextInput
+                      placeholder={`Option ${oi + 1}`}
+                      value={opt}
+                      onChangeText={(text) => updateOption(index, oi, text)}
+                      className="flex-1 p-2 bg-white rounded border-2 border-gray-100"
+                      placeholderTextColor="#9ca3af"
+                    />
+                    <TouchableOpacity onPress={() => removeOption(index, oi)}>
+                      <View className="bg-red-50 p-2 rounded-full">
+                        <FontAwesome5 name="trash" size={16} color="#dc2626" />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity onPress={() => addOption(index)} className="mt-2">
+                  <Text className="text-indigo-600">+ Add option</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ))}
+      {success && (
+        <View className="bg-green-100 p-4 rounded-lg mb-4">
+          <Text className="text-green-700 text-center">Schema saved successfully!</Text>
+        </View>
+      )}
+      {formSchema.length > 0 && (
+        <View className="mt-6">
+          <Text className="text-center text-gray-600 mt-2">Save Form Schema</Text>
+        </View>
+      )}
+    </View>
     </View>
   );
 }

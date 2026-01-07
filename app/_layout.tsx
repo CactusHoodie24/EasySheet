@@ -1,12 +1,24 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import "../global.css";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
-import { Text, View, Pressable, StyleSheet } from 'react-native';
-import { PaperProvider, Menu, Divider } from 'react-native-paper';
+import { Text, Pressable, StyleSheet } from 'react-native';
+import { PaperProvider, Menu, Divider,  MD3LightTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native'; // Import useFocusEffect
+import { UserDataProvider } from "../components/UserDataContext";
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from '@/lib/queryClient'
+
+
+const theme = {
+  ...MD3LightTheme,
+  colors: {
+    ...MD3LightTheme.colors,
+    primary: 'blue',
+    onSurfaceVariant: "black", 
+  },
+};
 
 type Person = {
   email?: string;
@@ -19,7 +31,7 @@ export default function RootLayout() {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
 
-  // Define the function to fetch and decode the token
+  // Fetch and decode token
   const fetchAndDecodeToken = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -27,24 +39,18 @@ export default function RootLayout() {
         const decoded = jwtDecode<Person>(token);
         setUser(decoded);
       } else {
-        setUser(null); // Clear user if no token is found
+        setUser(null);
       }
     } catch (error) {
       console.error('Error decoding token:', error);
-      setUser(null); // Clear user on error
+      setUser(null);
     }
-  }, []); // No dependencies, as it only reads from AsyncStorage
+  }, []);
 
-  // Use useFocusEffect to call fetchAndDecodeToken whenever the screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      fetchAndDecodeToken();
-      // Optional: return a cleanup function if needed
-      return () => {
-        // Any cleanup when the screen loses focus
-      };
-    }, [fetchAndDecodeToken]) // Depend on fetchAndDecodeToken
-  );
+  // Run once on layout mount
+  useEffect(() => {
+    fetchAndDecodeToken();
+  }, [fetchAndDecodeToken]);
 
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -52,22 +58,22 @@ export default function RootLayout() {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('token');
-      // After removing the token, call fetchAndDecodeToken to update the UI
-      // useFocusEffect will also trigger it when navigating back to this screen
-      fetchAndDecodeToken(); 
+      setUser(null);
       closeMenu();
-      router.replace('/login'); // Navigate to login screen
+      router.replace('/'); // navigate to login screen
     } catch (error) {
       console.error('Error logging out:', error);
     }
   };
 
   return (
-    <PaperProvider>
+    <QueryClientProvider client={queryClient}>
+    <UserDataProvider>
+    <PaperProvider theme={theme}>
       <Stack>
-        <Stack.Screen 
-          name="(tabs)" 
-          options={{ 
+        <Stack.Screen
+          name="(tabs)"
+          options={{
             title: "EasySheet",
             headerRight: () => (
               <Menu
@@ -114,10 +120,12 @@ export default function RootLayout() {
                 />
               </Menu>
             ),
-          }}  
+          }}
         />
       </Stack>
     </PaperProvider>
+    </UserDataProvider>
+    </QueryClientProvider>
   );
 }
 

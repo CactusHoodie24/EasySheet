@@ -1,13 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   return (
     <Tabs>
       <Tabs.Screen
-        name="(home)"
+        name="(home)/index"  // match the folder/file path
         options={{
           headerShown: false,
           title: 'Home',
@@ -16,43 +14,46 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
-        name="login"
-        options={{
-          headerShown: false,
-          title: 'Login',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="log-in-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="create"
+        name="create/index"
         options={{
           headerShown: false,
           title: 'Create',
           tabBarIcon: ({ color, size }) => (
-          <Ionicons name="document-text-outline" size={24} color="green" />
+            <Ionicons name="document-text-outline" size={size} color="green" />
           ),
         }}
       />
-            <Tabs.Screen
-        name="edit"
+
+      <Tabs.Screen
+        name="edit/index"
         options={{
           headerShown: false,
-          title: 'edit',
+          title: 'Edit',
           tabBarIcon: ({ color, size }) => (
-          <Ionicons name="pencil-outline" size={24} color="green" />
+            <Ionicons name="pencil-outline" size={size} color="green" />
           ),
         }}
       />
          <Tabs.Screen
-        name="Preview"
+        name="login/index"
+        options={{
+          headerShown: false,
+          title: 'Login',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="eye-outline" size={size} color="green" />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="Preview/index"
         options={{
           headerShown: false,
           title: 'Preview',
           tabBarIcon: ({ color, size }) => (
-          <Ionicons name="pencil-outline" size={24} color="green" />
+            <Ionicons name="eye-outline" size={size} color="green" />
           ),
         }}
       />
