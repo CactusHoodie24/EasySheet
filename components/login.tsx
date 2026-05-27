@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Alert } from 'react-native';
-import axios from 'axios';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQueryClient } from '@tanstack/react-query';
+import { apiRequest, saveAuthTokens } from '@/lib/api';
 
 export default function MobileLogin() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -14,12 +15,17 @@ export default function MobileLogin() {
   const requestOTP = async () => {
     setLoading(true);
     try {
-      const res = await axios.post('http://192.168.1.171:3000/api/request', { email });
-      if (res.data.success) {
+      const res = await apiRequest<{ success: boolean; message?: string }, { email: string }>({
+        method: 'POST',
+        url: '/api/request',
+        data: { email },
+        auth: false,
+      });
+      if (res.success) {
         Alert.alert('Success', 'Check your email for the code');
         setStep('otp'); // show OTP input
       } else {
-        Alert.alert('Error', res.data.message);
+        Alert.alert('Error', res.message);
       }
     } catch (err: any) {
      console.error('Full error:', err);
@@ -46,14 +52,56 @@ export default function MobileLogin() {
   const verifyOTP = async () => {
     setLoading(true);
     try {
-      const res = await axios.post('http://192.168.1.171:3000/api/mobile', { email, code });
-      if (res.data.success && res.data.token) {
-        // save token securely
-         AsyncStorage.setItem('authToken', res.data.token);
+      const res = await apiRequest<{
+        success: boolean;
+        message?: string;
+        token?: string;
+        accessToken?: string;
+        authToken?: string;
+        idToken?: string;
+        customToken?: string;
+        refreshToken?: string;
+        refresh_token?: string;
+        data?: {
+          token?: string;
+          accessToken?: string;
+          authToken?: string;
+          idToken?: string;
+          customToken?: string;
+          refreshToken?: string;
+          refresh_token?: string;
+        };
+        session?: {
+          token?: string;
+          accessToken?: string;
+          authToken?: string;
+          idToken?: string;
+          customToken?: string;
+          refreshToken?: string;
+          refresh_token?: string;
+        };
+        user?: {
+          token?: string;
+          accessToken?: string;
+          authToken?: string;
+          idToken?: string;
+          customToken?: string;
+          refreshToken?: string;
+          refresh_token?: string;
+        };
+      }, { email: string; code: string }>({
+        method: 'POST',
+        url: '/api/mobile',
+        data: { email, code },
+        auth: false,
+      });
+      if (res.success) {
+        await saveAuthTokens(res);
+        await queryClient.invalidateQueries({ queryKey: ['forms'] });
         Alert.alert('Success', 'You are logged in!');
         router.replace('/(tabs)/(home)'); // navigate to home screen
       } else {
-        Alert.alert('Error', res.data.message || 'Invalid code');
+        Alert.alert('Error', res.message || 'Invalid code');
       }
     } catch (err) {
       console.error(err);

@@ -1,12 +1,58 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text } from "react-native";
 import CardComponent from "@/components/card";
 import { useUserData } from "@/components/UserDataContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { logoutUser } from "@/lib/api";
+
+const LOGIN_ROUTE = "/(tabs)/login";
 
 export default function HomePage() {
-  const { data, loading, refresh, error, lastUpdated } = useUserData();
+  const { data, loading, error, errorCode, lastUpdated, clearData } = useUserData();
+  const router = useRouter();
 
-  // Normalize entries (depends on how your context returns data)
+  // Handle session expired
+  useEffect(() => {
+  console.log("[HomePage] useEffect triggered, errorCode =", errorCode);
+
+  const handleRedirect = async () => {
+    if (!errorCode) return;
+
+    // ------------------ No auth token → go to login ------------------
+    if (errorCode === "NO_AUTH_TOKEN" || errorCode === "SESSION_EXPIRED") {
+      console.warn("[HomePage] Session expired detected");
+
+      // Clear storage
+      await logoutUser();
+
+      // Clear React Query cache
+      clearData?.();
+
+      // Redirect to login
+      router.replace(LOGIN_ROUTE);
+    }
+
+    // ------------------ Profile incomplete → go to verifyProfile ------------------
+    if (errorCode === "PROFILE_INCOMPLETE") {
+      console.warn("[HomePage] Profile incomplete, redirecting to verifyProfile");
+
+      // Keep auth token so user can complete profile
+      await AsyncStorage.removeItem("cachedUserData");
+      await AsyncStorage.removeItem("cachedUserProfile");
+
+      // Clear React Query cache
+      clearData?.();
+
+      // Redirect to verifyProfile
+      setTimeout(() => router.replace("/verifyProfile"), 500);
+    }
+  };
+
+  handleRedirect();
+}, [clearData, errorCode, router]);
+
+  // Normalize entries
   const details = React.useMemo(() => {
     if (!data) return [];
 
@@ -15,6 +61,20 @@ export default function HomePage() {
 
     return [];
   }, [data]);
+
+  // Render session expired UI first
+  if (errorCode === "NO_AUTH_TOKEN" || errorCode === "SESSION_EXPIRED") {
+    return (
+      <View className="flex-1 justify-center items-center bg-red-50 p-6">
+        <Text className="text-red-600 font-bold text-lg mb-2 text-center">
+          Your session has expired
+        </Text>
+        <Text className="text-red-500 text-sm text-center">
+          Please log in again to continue
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -48,7 +108,7 @@ export default function HomePage() {
                 </Text>
               </View>
             )}
-           {data && <CardComponent details={data} />}
+            {data && <CardComponent details={data} />}
           </>
         )}
       </View>

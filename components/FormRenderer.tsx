@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { ScrollView, View, Alert, StyleSheet } from "react-native";
-import { Text, Button, TextInput, Menu, Checkbox, Switch, Card, RadioButton } from "react-native-paper";
+import { Text, Button, TextInput, Menu, Checkbox, Card, RadioButton } from "react-native-paper";
 import { useUserData } from "../components/UserDataContext";
 import { FormEntry, FormInput } from "../types/types";
-import { submitFormEntries } from "../lib/submitFormEntries";
 import { useSubmitFormEntries } from "../lib/useSubmitFormEntries";
 
 interface FormRendererProps {
@@ -156,7 +155,7 @@ export default function FormRenderer({ onSubmit }: FormRendererProps) {
     ];
 
     try {
-      submitMutation.mutate(payload);
+      await submitMutation.mutateAsync(payload);
       Alert.alert("Success", "Form submitted successfully.");
       setFormValues({});
     } catch (error: any) {
@@ -371,6 +370,8 @@ export default function FormRenderer({ onSubmit }: FormRendererProps) {
             <Button
               mode="contained"
               onPress={handleSubmit}
+              loading={submitMutation.isPending}
+              disabled={submitMutation.isPending}
               style={styles.submitButton}
               contentStyle={styles.submitButtonContent}
               icon="send"

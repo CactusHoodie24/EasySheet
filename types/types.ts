@@ -73,4 +73,12 @@ export interface UserDataContextType {
   refresh: () => Promise<void>;
   error: boolean;            // <- new
   lastUpdated: number | null; 
+   errorCode?: string | null;
+   clearData: () => Promise<void>;
+}
+
+export interface ProfileFormData {
+  name: string;
+  email: string;
+  profileCompleted: boolean;
 }

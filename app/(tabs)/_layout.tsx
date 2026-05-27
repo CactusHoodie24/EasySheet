@@ -15,16 +15,6 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
-        name="create/index"
-        options={{
-          headerShown: false,
-          title: 'Create',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color="green" />
-          ),
-        }}
-      />
 
       <Tabs.Screen
         name="edit/index"
@@ -47,16 +37,6 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
-        name="Preview/index"
-        options={{
-          headerShown: false,
-          title: 'Preview',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="eye-outline" size={size} color="green" />
-          ),
-        }}
-      />
     </Tabs>
   );
 }

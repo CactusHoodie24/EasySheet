@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import "../global.css";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
 import { Text, Pressable, StyleSheet } from 'react-native';
-import { PaperProvider, Menu, Divider,  MD3LightTheme } from 'react-native-paper';
-import { useRouter } from 'expo-router';
-import { UserDataProvider } from "../components/UserDataContext";
+import { PaperProvider, Menu, Divider,  MD3LightTheme, Snackbar } from 'react-native-paper';
+import { UserDataProvider, useUserData } from "../components/UserDataContext";
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/queryClient'
-
+import { logoutUser, onSessionExpired } from '@/lib/api';
 
 const theme = {
   ...MD3LightTheme,
@@ -26,15 +25,41 @@ type Person = {
   exp?: number;
 };
 
+const LOGIN_ROUTE = "/(tabs)/login";
+
 export default function RootLayout() {
   const [user, setUser] = useState<Person | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
 
+const SessionWatcher = () => {
+  const { errorCode } = useUserData();
+  const router = useRouter();
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (errorCode === "SESSION_EXPIRED") {
+      setVisible(true);
+      logoutUser();
+      router.replace(LOGIN_ROUTE);
+    }
+  }, [errorCode, router]);
+
+  return (
+    <Snackbar
+      visible={visible}
+      onDismiss={() => setVisible(false)}
+      duration={3000}
+    >
+      Your session has expired. Please sign in again.
+    </Snackbar>
+  );
+};
+
   // Fetch and decode token
   const fetchAndDecodeToken = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('authToken');
       if (token) {
         const decoded = jwtDecode<Person>(token);
         setUser(decoded);
@@ -52,15 +77,22 @@ export default function RootLayout() {
     fetchAndDecodeToken();
   }, [fetchAndDecodeToken]);
 
+  useEffect(() => {
+    return onSessionExpired(() => {
+      setUser(null);
+      router.replace(LOGIN_ROUTE);
+    });
+  }, [router]);
+
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('token');
+      await logoutUser();
       setUser(null);
       closeMenu();
-      router.replace('/'); // navigate to login screen
+      router.replace(LOGIN_ROUTE); // navigate to login screen
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -70,6 +102,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
     <UserDataProvider>
     <PaperProvider theme={theme}>
+      <SessionWatcher />
       <Stack>
         <Stack.Screen
           name="(tabs)"

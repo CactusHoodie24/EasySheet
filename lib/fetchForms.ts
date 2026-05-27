@@ -1,49 +1,110 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { UserData } from "../types/types";
+import { UserData, ProfileFormData } from "../types/types";
+import { apiRequest, logoutUser } from "./api";
 
 const CACHE_KEY = "cachedUserData";
+const PROFILE_CACHE_KEY = "cachedUserProfile";
 
-/**
- * Fetches all forms and related dashboard data for the current user.
- * - On success: returns fresh data and saves it to AsyncStorage.
- * - On network / server error: falls back to the last cached data (if any),
- *   so the app still works offline and across restarts.
- *
- * This function is designed to be used as a TanStack Query `queryFn`.
- */
-export const fetchForms = async (): Promise<UserData> => {
-  const token = await AsyncStorage.getItem("authToken");
-  if (!token) {
-    throw new Error("No auth token");
+const isSessionExpiredError = (err: unknown) => {
+  if (err instanceof Error && err.message === "SESSION_EXPIRED") {
+    return true;
   }
 
-  const cached = await AsyncStorage.getItem(CACHE_KEY);
+  if (!axios.isAxiosError(err)) {
+    return false;
+  }
 
+  const status = err.response?.status;
+  const code = err.response?.data?.code;
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    code === "SESSION_EXPIRED" ||
+    code === "TOKEN_EXPIRED" ||
+    code === "ACCESS_TOKEN_EXPIRED"
+  );
+};
+
+export const fetchForms = async (): Promise<{ forms: UserData; profile: ProfileFormData | null }> => {
   try {
-    const res = await axios.get<{ success: boolean; data: UserData }>(
-      "http://192.168.1.171:3000/api/get-forms",
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const formsRes = await apiRequest<{
+      success: boolean;
+      data?: UserData;
+      code?: string;
+      message?: string;
+    }>({
+      url: "/api/get-forms",
+    });
 
-    if (!res.data.success) {
-      throw new Error("Failed to fetch user data");
+    if (!formsRes.success || !formsRes.data) {
+      console.error("[fetchForms] fetch forms failed:", formsRes);
+      throw new Error(formsRes.code || "FETCH_FAILED");
     }
 
-    const data = res.data.data;
+    const formsData = formsRes.data;
+    console.log("[fetchForms] saving forms to cache...");
+    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(formsData));
 
-    // Persist latest successful result for offline use & faster cold starts
-    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    let profileData: ProfileFormData | null = null;
+    try {
+      const profileRes = await apiRequest<{
+        success: boolean;
+        data?: ProfileFormData;
+        code?: string;
+        message?: string;
+      }>({
+        url: "/api/profile",
+      });
 
-    return data;
-  } catch (error) {
-    // If we have cached data, use it as a graceful offline fallback
-    if (cached) {
-      console.warn("fetchForms: using cached data due to fetch error", error);
-      return JSON.parse(cached) as UserData;
+      if (profileRes.success && profileRes.data) {
+        profileData = profileRes.data;
+        console.log("[fetchForms] saving profile to cache...");
+        await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profileData));
+      } else {
+        console.warn("[fetchForms] no profile data -> profile incomplete");
+        throw new Error("PROFILE_INCOMPLETE");
+      }
+    } catch (err) {
+      console.warn("[fetchForms] profile fetch error", err);
+
+      if (isSessionExpiredError(err)) {
+        throw new Error("SESSION_EXPIRED");
+      }
+
+      throw new Error("PROFILE_INCOMPLETE");
     }
 
-    // No cache available – rethrow so React Query can surface the error
-    throw error;
+    return { forms: formsData, profile: profileData };
+  } catch (err) {
+    console.error("[fetchForms] error caught:", err);
+
+    if (isSessionExpiredError(err)) {
+      console.warn("[fetchForms] session expired, clearing storage");
+      await logoutUser();
+      throw new Error("SESSION_EXPIRED");
+    }
+
+    if (
+      err instanceof Error &&
+      err.message !== "NO_AUTH_TOKEN" &&
+      err.message !== "SESSION_EXPIRED" &&
+      err.message !== "PROFILE_INCOMPLETE"
+    ) {
+      const cachedForms = await AsyncStorage.getItem(CACHE_KEY);
+      const cachedProfile = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+
+      if (cachedForms) {
+        console.warn("[fetchForms] using cached data due to fetch error", err);
+        return {
+          forms: JSON.parse(cachedForms) as UserData,
+          profile: cachedProfile ? (JSON.parse(cachedProfile) as ProfileFormData) : null,
+        };
+      }
+    }
+
+    throw err;
   }
 };
+

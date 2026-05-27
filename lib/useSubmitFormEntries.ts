@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import axios from 'axios'
 import { submitFormEntries, FormEntryPayload } from '../lib/submitFormEntries'
 
 export function useSubmitFormEntries() {
@@ -34,7 +35,16 @@ export function useSubmitFormEntries() {
     },
 
     // ❌ Server failed → rollback
-    onError: (_error, _newEntries, context) => {
+    onError: (error, _newEntries, context) => {
+      if (axios.isAxiosError(error)) {
+        console.error("[submitFormEntries] request failed", {
+          status: error.response?.status,
+          data: error.response?.data,
+        })
+      } else {
+        console.error("[submitFormEntries] request failed", error)
+      }
+
       if (context?.previousEntries) {
         queryClient.setQueryData(
           ['formEntries'],
