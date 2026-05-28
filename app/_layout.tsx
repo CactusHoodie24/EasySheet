@@ -25,7 +25,7 @@ type Person = {
   exp?: number;
 };
 
-const LOGIN_ROUTE = "/(tabs)/login";
+const LOGIN_ROUTE = "/login";
 
 export default function RootLayout() {
   const [user, setUser] = useState<Person | null>(null);

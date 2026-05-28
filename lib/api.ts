@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AxiosError, AxiosRequestConfig, Method } from "axios";
 
@@ -76,7 +76,7 @@ const getTokenDebugInfo = (token: string | null) => ({
 });
 
 const isAuthExpiredError = (error: unknown) => {
-  if (!axios.isAxiosError(error)) return false;
+  if (!isAxiosError(error)) return false;
 
   const code = error.response?.data?.code;
   const message = error.response?.data?.message;
@@ -141,7 +141,6 @@ const refreshAuthToken = async () => {
     { refreshToken },
     {
       headers: {
-        Authorization: `Bearer ${refreshToken}`,
         "Content-Type": "application/json",
       },
     }

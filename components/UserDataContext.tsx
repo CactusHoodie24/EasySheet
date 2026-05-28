@@ -1,10 +1,10 @@
 // UserDataContext.tsx
 import React, { createContext, useContext } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserData, ProfileFormData, UserDataContextType } from "../types/types";
 import { fetchForms } from "../lib/fetchForms";
 
-// Extend your context type to include profile
 interface ExtendedUserDataContextType extends UserDataContextType {
   profile: ProfileFormData | null;
   errorCode?: string | null;
@@ -13,7 +13,20 @@ interface ExtendedUserDataContextType extends UserDataContextType {
 const UserDataContext = createContext<ExtendedUserDataContextType | undefined>(undefined);
 
 export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const queryClient = useQueryClient(); // ✅ React Query client
+  const queryClient = useQueryClient();
+  const [hasAuthToken, setHasAuthToken] = React.useState(false);
+  const [checkingAuth, setCheckingAuth] = React.useState(true);
+
+  React.useEffect(() => {
+    const checkToken = async () => {
+      const token = await AsyncStorage.getItem("authToken");
+      setHasAuthToken(Boolean(token));
+      setCheckingAuth(false);
+    };
+
+    checkToken();
+  }, []);
+
   const { data, isLoading, refetch, dataUpdatedAt, isError, error } = useQuery<{
     forms: UserData;
     profile: ProfileFormData | null;
@@ -21,29 +34,32 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     queryKey: ["forms"],
     queryFn: fetchForms,
     retry: false,
+    enabled: hasAuthToken,
   });
 
-  // Wrap refetch so it matches () => Promise<void>
   const refresh = async () => {
-    await refetch();
+    const token = await AsyncStorage.getItem("authToken");
+    setHasAuthToken(Boolean(token));
+
+    if (token) {
+      await refetch();
+    }
   };
 
   const clearData = async () => {
-  await queryClient.removeQueries({ queryKey: ["forms"] }); // ✅ fix TS error
-};
+    await queryClient.removeQueries({ queryKey: ["forms"] });
+  };
 
-
-  // Provide both generic error flag AND code
-  const errorCode = error?.message || null;
+  const errorCode = hasAuthToken ? error?.message || null : null;
 
   return (
     <UserDataContext.Provider
       value={{
         data: data?.forms ?? null,
         profile: data?.profile ?? null,
-        loading: isLoading,
+        loading: checkingAuth || isLoading,
         refresh,
-        error: isError,
+        error: hasAuthToken && isError,
         errorCode,
         lastUpdated: dataUpdatedAt || null,
         clearData,
@@ -54,7 +70,6 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-// Hook for easy access
 export const useUserData = () => {
   const context = useContext(UserDataContext);
   if (!context) throw new Error("useUserData must be used within UserDataProvider");

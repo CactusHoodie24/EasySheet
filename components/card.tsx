@@ -4,6 +4,7 @@ import { ScrollView, View } from "react-native";
 import { Card, Text, Button } from "react-native-paper";
 import { router } from "expo-router";
 import { FormEntry, UserData } from "../types/types";
+import { tabsTheme } from "@/theme/tabsTheme";
 
 interface CardComponentProps {
   details: UserData;
@@ -26,26 +27,29 @@ const CardComponent: React.FC<CardComponentProps> = ({ details }) => {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16 }}>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
       {details.entries.map((entry) => (
         <Card
           key={entry.id}
           style={{
             marginBottom: 16,
-            backgroundColor: "white",
-            borderRadius: 16,
+            backgroundColor: tabsTheme.colors.surface,
+            borderColor: tabsTheme.colors.border,
+            borderRadius: tabsTheme.spacing.radius,
+            borderWidth: 1,
             overflow: "hidden",
+            ...tabsTheme.shadow,
           }}
         >
-          <View style={{ backgroundColor: "#0ea5e9", height: 4 }} />
+          <View style={{ backgroundColor: tabsTheme.colors.primary, height: 4 }} />
           <Card.Content style={{ padding: 16 }}>
             <Text
               variant="titleLarge"
-              style={{ fontSize: 20, fontWeight: "bold", marginBottom: 4 }}
+              style={{ color: tabsTheme.colors.text, fontSize: 20, fontWeight: "800", marginBottom: 4 }}
             >
               {entry.title}
             </Text>
-            <Text variant="bodyMedium" style={{ color: "#555", marginBottom: 8 }}>
+            <Text variant="bodyMedium" style={{ color: tabsTheme.colors.textMuted, marginBottom: 8 }}>
               Created on{" "}
               {entry.createdAt
                 ? new Date(entry.createdAt).toLocaleDateString("en-US", {
@@ -55,7 +59,7 @@ const CardComponent: React.FC<CardComponentProps> = ({ details }) => {
                   })
                 : "Unknown"}
             </Text>
-            <Text variant="bodySmall" style={{ color: "#777" }}>
+            <Text variant="bodySmall" style={{ color: tabsTheme.colors.textMuted }}>
               {entry.inputs.length} fields •{" "}
               {details.weed.filter((v) => v.entryId === entry.id).length} submissions
             </Text>
@@ -64,7 +68,9 @@ const CardComponent: React.FC<CardComponentProps> = ({ details }) => {
             <Button
               mode="contained"
               onPress={() => handlePreview(entry)}
-              style={{ backgroundColor: "#3b82f6", flex: 1, borderRadius: 8 }}
+              icon="eye-outline"
+              buttonColor={tabsTheme.colors.primary}
+              style={{ flex: 1, borderRadius: tabsTheme.spacing.radius }}
             >
               Preview
             </Button>

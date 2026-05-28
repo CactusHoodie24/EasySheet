@@ -4,6 +4,7 @@ import { Text, Button, TextInput, Menu, Checkbox, Card, RadioButton } from "reac
 import { useUserData } from "../components/UserDataContext";
 import { FormEntry, FormInput } from "../types/types";
 import { useSubmitFormEntries } from "../lib/useSubmitFormEntries";
+import { tabsTheme } from "@/theme/tabsTheme";
 
 interface FormRendererProps {
   onSubmit?: (entryId: string, values: Record<string, any>) => void;
@@ -335,6 +336,7 @@ export default function FormRenderer({ onSubmit }: FormRendererProps) {
                 onPress={() => setFormMenuVisible(true)}
                 style={styles.formSelector}
                 icon="chevron-down"
+                textColor={tabsTheme.colors.primary}
               >
                 {selectedForm ? selectedForm.title : "-- Select a form --"}
               </Button>
@@ -388,47 +390,53 @@ export default function FormRenderer({ onSubmit }: FormRendererProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: tabsTheme.colors.background,
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 28,
   },
   loadingText: {
     textAlign: "center",
     marginTop: 50,
     fontSize: 16,
-    color: "#666",
+    color: tabsTheme.colors.textMuted,
   },
   debugText: {
     textAlign: "center",
     marginTop: 10,
     fontSize: 12,
-    color: "#999",
+    color: tabsTheme.colors.textMuted,
   },
   card: {
     marginBottom: 16,
-    elevation: 2,
-    backgroundColor: "#fff",
+    backgroundColor: tabsTheme.colors.surface,
+    borderColor: tabsTheme.colors.border,
+    borderRadius: tabsTheme.spacing.radius,
+    borderWidth: 1,
+    ...tabsTheme.shadow,
   },
   formCard: {
     marginTop: 8,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "800",
     marginBottom: 12,
-    color: "#666",
+    color: tabsTheme.colors.textMuted,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   formTitle: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: "800",
     marginBottom: 24,
-    color: "#333",
+    color: tabsTheme.colors.text,
   },
   formSelector: {
     marginTop: 8,
+    borderColor: tabsTheme.colors.border,
+    borderRadius: tabsTheme.spacing.radius,
   },
   inputWrapper: {
     marginBottom: 20,
@@ -437,7 +445,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: tabsTheme.colors.surface,
     color: 'black',
     marginTop: 8,
   },
@@ -448,10 +456,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 8,
-    color: "#333",
+    color: tabsTheme.colors.text,
   },
   required: {
-    color: "#d32f2f",
+    color: tabsTheme.colors.danger,
   },
   booleanContainer: {
     marginTop: 8,
@@ -481,7 +489,7 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     fontSize: 16,
-    color: "#333",
+    color: tabsTheme.colors.text,
     marginLeft: 8,
     flex: 1,
   },
@@ -492,11 +500,13 @@ const styles = StyleSheet.create({
   },
   radioLabel: {
     fontSize: 16,
-    color: "#333",
+    color: tabsTheme.colors.text,
   },
   selectButton: {
     marginTop: 8,
     color: "black",
+    borderColor: tabsTheme.colors.border,
+    borderRadius: tabsTheme.spacing.radius,
   },
   selectButtonContent: {
     paddingVertical: 8,
@@ -505,6 +515,8 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: 32,
     paddingVertical: 4,
+    borderRadius: tabsTheme.spacing.radius,
+    backgroundColor: tabsTheme.colors.primary,
   },
   submitButtonContent: {
     paddingVertical: 8,

@@ -1,94 +1,95 @@
 import React, { useEffect } from "react";
-import { View, Text } from "react-native";
-import CardComponent from "@/components/card";
-import { useUserData } from "@/components/UserDataContext";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { Text } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import CardComponent from "@/components/card";
+import { useUserData } from "@/components/UserDataContext";
 import { logoutUser } from "@/lib/api";
+import { tabsTheme } from "@/theme/tabsTheme";
 
-const LOGIN_ROUTE = "/(tabs)/login";
+const LOGIN_ROUTE = "/login";
 
 export default function HomePage() {
   const { data, loading, error, errorCode, lastUpdated, clearData } = useUserData();
   const router = useRouter();
 
-  // Handle session expired
   useEffect(() => {
-  console.log("[HomePage] useEffect triggered, errorCode =", errorCode);
+    console.log("[HomePage] useEffect triggered, errorCode =", errorCode);
 
-  const handleRedirect = async () => {
-    if (!errorCode) return;
+    const handleRedirect = async () => {
+      if (!errorCode) return;
 
-    // ------------------ No auth token → go to login ------------------
-    if (errorCode === "NO_AUTH_TOKEN" || errorCode === "SESSION_EXPIRED") {
-      console.warn("[HomePage] Session expired detected");
+      if (errorCode === "NO_AUTH_TOKEN" || errorCode === "SESSION_EXPIRED") {
+        console.warn("[HomePage] Session expired detected");
+        await logoutUser();
+        clearData?.();
+        router.replace(LOGIN_ROUTE);
+      }
 
-      // Clear storage
-      await logoutUser();
+      if (errorCode === "PROFILE_INCOMPLETE") {
+        console.warn("[HomePage] Profile incomplete, redirecting to verifyProfile");
+        await AsyncStorage.removeItem("cachedUserData");
+        await AsyncStorage.removeItem("cachedUserProfile");
+        clearData?.();
+        setTimeout(() => router.replace("/verifyProfile"), 500);
+      }
+    };
 
-      // Clear React Query cache
-      clearData?.();
+    handleRedirect();
+  }, [clearData, errorCode, router]);
 
-      // Redirect to login
-      router.replace(LOGIN_ROUTE);
-    }
-
-    // ------------------ Profile incomplete → go to verifyProfile ------------------
-    if (errorCode === "PROFILE_INCOMPLETE") {
-      console.warn("[HomePage] Profile incomplete, redirecting to verifyProfile");
-
-      // Keep auth token so user can complete profile
-      await AsyncStorage.removeItem("cachedUserData");
-      await AsyncStorage.removeItem("cachedUserProfile");
-
-      // Clear React Query cache
-      clearData?.();
-
-      // Redirect to verifyProfile
-      setTimeout(() => router.replace("/verifyProfile"), 500);
-    }
-  };
-
-  handleRedirect();
-}, [clearData, errorCode, router]);
-
-  // Normalize entries
   const details = React.useMemo(() => {
     if (!data) return [];
-
     if (Array.isArray(data.entries)) return data.entries;
     if (Array.isArray(data)) return data;
-
     return [];
   }, [data]);
 
-  // Render session expired UI first
+  const submissionCount = data && "weed" in data && Array.isArray(data.weed) ? data.weed.length : 0;
+
   if (errorCode === "NO_AUTH_TOKEN" || errorCode === "SESSION_EXPIRED") {
     return (
-      <View className="flex-1 justify-center items-center bg-red-50 p-6">
-        <Text className="text-red-600 font-bold text-lg mb-2 text-center">
-          Your session has expired
-        </Text>
-        <Text className="text-red-500 text-sm text-center">
-          Please log in again to continue
-        </Text>
-      </View>
+      <StatusState
+        icon="lock-closed-outline"
+        title="Your session has expired"
+        message="Please log in again to continue."
+        tone="danger"
+      />
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 shadow-lg">
-        <Text className="text-2xl font-bold text-white mb-1">
-          Your Forms
-        </Text>
-        <Text className="text-blue-100">
-          Manage and track your form entries
-        </Text>
-      </View>
+    <View style={styles.screen}>
+      <LinearGradient
+        colors={[tabsTheme.colors.primaryDark, tabsTheme.colors.primary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerTopRow}>
+          <View style={styles.headerCopy}>
+            <Text variant="headlineSmall" style={styles.headerTitle}>
+              Your Forms
+            </Text>
+            <Text variant="bodyMedium" style={styles.headerSubtitle}>
+              Manage entries, submissions, and daily form work.
+            </Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Ionicons name="document-text-outline" size={24} color="#ffffff" />
+          </View>
+        </View>
 
-      <View className="flex-1 px-4">
+        <View style={styles.statsRow}>
+          <Metric label="Forms" value={details.length} />
+          <Metric label="Submissions" value={submissionCount} />
+        </View>
+      </LinearGradient>
+
+      <View style={styles.content}>
         {loading ? (
           <CenteredCard text="Loading your forms..." />
         ) : error ? (
@@ -98,8 +99,9 @@ export default function HomePage() {
         ) : (
           <>
             {lastUpdated && (
-              <View className="py-3 px-1">
-                <Text className="text-gray-500 text-sm">
+              <View style={styles.updatedPill}>
+                <Ionicons name="time-outline" size={14} color={tabsTheme.colors.textMuted} />
+                <Text variant="bodySmall" style={styles.updatedText}>
                   Last updated:{" "}
                   {new Date(lastUpdated).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -118,9 +120,12 @@ export default function HomePage() {
 
 function CenteredCard({ text }: { text: string }) {
   return (
-    <View className="flex-1 justify-center items-center">
-      <View className="bg-white p-6 rounded-xl shadow-md">
-        <Text className="text-blue-600">{text}</Text>
+    <View style={styles.centerWrap}>
+      <View style={styles.stateCard}>
+        <ActivityIndicator color={tabsTheme.colors.primary} />
+        <Text variant="bodyMedium" style={styles.centerText}>
+          {text}
+        </Text>
       </View>
     </View>
   );
@@ -128,28 +133,196 @@ function CenteredCard({ text }: { text: string }) {
 
 function ErrorCard() {
   return (
-    <View className="mt-4 bg-red-50 p-4 rounded-xl">
-      <Text className="text-red-600 font-medium text-center">
-        Unable to load data
-      </Text>
-      <Text className="text-red-500 text-sm text-center mt-1">
-        Please check your connection and try again
-      </Text>
-    </View>
+    <StatusState
+      icon="cloud-offline-outline"
+      title="Unable to load data"
+      message="Please check your connection and try again."
+      tone="danger"
+    />
   );
 }
 
 function EmptyState() {
   return (
-    <View className="flex-1 justify-center items-center">
-      <View className="bg-white p-6 rounded-xl shadow-md">
-        <Text className="text-gray-600 text-center">
-          No forms created yet
+    <StatusState
+      icon="folder-open-outline"
+      title="No forms yet"
+      message="Create your first form and it will show up here."
+    />
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={styles.metric}>
+      <Text variant="titleLarge" style={styles.metricValue}>
+        {value}
+      </Text>
+      <Text variant="labelMedium" style={styles.metricLabel}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function StatusState({
+  icon,
+  title,
+  message,
+  tone = "default",
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  message: string;
+  tone?: "default" | "danger";
+}) {
+  const isDanger = tone === "danger";
+
+  return (
+    <View style={[styles.centerWrap, isDanger && styles.dangerScreen]}>
+      <View style={styles.stateCard}>
+        <View style={[styles.stateIcon, isDanger && styles.dangerIcon]}>
+          <Ionicons
+            name={icon}
+            size={28}
+            color={isDanger ? tabsTheme.colors.danger : tabsTheme.colors.primary}
+          />
+        </View>
+        <Text variant="titleMedium" style={[styles.stateTitle, isDanger && styles.dangerText]}>
+          {title}
         </Text>
-        <Text className="text-gray-500 text-sm text-center mt-1">
-          Create your first form to get started
+        <Text variant="bodyMedium" style={styles.stateMessage}>
+          {message}
         </Text>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: tabsTheme.colors.background,
+  },
+  header: {
+    paddingBottom: 18,
+    paddingHorizontal: tabsTheme.spacing.screen,
+    paddingTop: 28,
+  },
+  headerTopRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 14,
+    justifyContent: "space-between",
+  },
+  headerCopy: {
+    flex: 1,
+  },
+  headerTitle: {
+    color: "#ffffff",
+    fontWeight: "800",
+  },
+  headerSubtitle: {
+    color: "#d7fffb",
+    marginTop: 4,
+    maxWidth: 280,
+  },
+  headerIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    borderRadius: tabsTheme.spacing.radius,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 20,
+  },
+  metric: {
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    borderColor: "rgba(255, 255, 255, 0.22)",
+    borderRadius: tabsTheme.spacing.radius,
+    borderWidth: 1,
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  metricValue: {
+    color: "#ffffff",
+    fontWeight: "800",
+  },
+  metricLabel: {
+    color: "#d7fffb",
+    marginTop: 2,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 4,
+  },
+  updatedPill: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: 6,
+    marginHorizontal: 16,
+    marginTop: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  updatedText: {
+    color: tabsTheme.colors.textMuted,
+  },
+  centerWrap: {
+    alignItems: "center",
+    backgroundColor: tabsTheme.colors.background,
+    flex: 1,
+    justifyContent: "center",
+    padding: tabsTheme.spacing.screen,
+  },
+  dangerScreen: {
+    backgroundColor: tabsTheme.colors.dangerSoft,
+  },
+  stateCard: {
+    alignItems: "center",
+    backgroundColor: tabsTheme.colors.surface,
+    borderColor: tabsTheme.colors.border,
+    borderRadius: tabsTheme.spacing.radius,
+    borderWidth: 1,
+    maxWidth: 340,
+    padding: 22,
+    width: "100%",
+    ...tabsTheme.shadow,
+  },
+  stateIcon: {
+    alignItems: "center",
+    backgroundColor: tabsTheme.colors.primarySoft,
+    borderRadius: tabsTheme.spacing.radius,
+    height: 48,
+    justifyContent: "center",
+    marginBottom: 14,
+    width: 48,
+  },
+  dangerIcon: {
+    backgroundColor: tabsTheme.colors.dangerSoft,
+  },
+  stateTitle: {
+    color: tabsTheme.colors.text,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  dangerText: {
+    color: tabsTheme.colors.danger,
+  },
+  stateMessage: {
+    color: tabsTheme.colors.textMuted,
+    marginTop: 6,
+    textAlign: "center",
+  },
+  centerText: {
+    color: tabsTheme.colors.primary,
+    marginTop: 12,
+    textAlign: "center",
+  },
+});

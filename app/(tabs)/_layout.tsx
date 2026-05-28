@@ -1,16 +1,42 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { tabsTheme } from '@/theme/tabsTheme';
 
 export default function TabLayout() {
   return (
-    <Tabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: tabsTheme.colors.primary,
+        tabBarInactiveTintColor: tabsTheme.colors.textMuted,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '700',
+          marginTop: 2,
+        },
+        tabBarStyle: {
+          height: 68,
+          paddingTop: 8,
+          marginBottom: 50,
+          paddingBottom: 20,
+          backgroundColor: tabsTheme.colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: tabsTheme.colors.border,
+          ...tabsTheme.shadow,
+        },
+        tabBarItemStyle: {
+          borderRadius: tabsTheme.spacing.radius,
+          marginHorizontal: 8,
+        },
+      }}
+    >
       <Tabs.Screen
-        name="(home)/index"  // match the folder/file path
+        name="(home)/index"
         options={{
-          headerShown: false,
           title: 'Home',
+          tabBarAccessibilityLabel: 'Home tab',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+            <Ionicons name="home-outline" size={size + 1} color={color} />
           ),
         }}
       />
@@ -19,24 +45,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="edit/index"
         options={{
-          headerShown: false,
-          title: 'Edit',
+          title: 'Submit',
+          tabBarAccessibilityLabel: 'Submit form tab',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="pencil-outline" size={size} color="green" />
+            <Ionicons name="create-outline" size={size + 1} color={color} />
           ),
         }}
       />
-         <Tabs.Screen
-        name="login/index"
-        options={{
-          headerShown: false,
-          title: 'Login',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="eye-outline" size={size} color="green" />
-          ),
-        }}
-      />
-
     </Tabs>
   );
 }
